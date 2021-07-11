@@ -6,10 +6,22 @@ namespace Inputter
 
     public class Input
     {
-        private const uint KEY_UP = 0x02; //KEYEVENTF_KEYUP aka 0x0002 aka 2
+        private const uint KEY_UP = 0x02;
         private static Random _random { get; set; }
         private bool _useSleepFeature { get; set; }
 
+        //for user32 dll stuff
+        private const int MOUSEEVENTF_LEFTDOWN = 0x02;
+        private const int MOUSEEVENTF_LEFTUP = 0x04;
+        private const int MOUSEEVENTF_RIGHTDOWN = 0x08;
+        private const int MOUSEEVENTF_RIGHTUP = 0x10;
+
+
+        
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="useSleepFeature"></param>
         public Input(bool useSleepFeature = true)
         {
             _useSleepFeature = useSleepFeature;
@@ -23,10 +35,12 @@ namespace Inputter
         public void Send(Key key)
         {
             PressKeyDown(key);
+
             if (_useSleepFeature)
             {
                 RandomSleepKeyPress();
             }
+            
             PressKeyUp(key);
         }
 
@@ -55,7 +69,9 @@ namespace Inputter
             {
                 PressKeyDown(mod);
             }
+            
             Send(key);
+
             foreach (var mod in modifiers)
             {
                 PressKeyUp(mod);
@@ -100,11 +116,26 @@ namespace Inputter
             }
         }
 
+        /// <summary>
+        /// Move the mouse to a specified mouse position on the user's primary monitor
+        /// </summary>
+        /// <remarks>
+        /// x,y coords represented on like all computers are like
+        ///    [0,0, 1,0, 2,0, 3,0, 4,0, 5,0]
+        ///    [0,1, 1,1, 2,1, 3,1, 4,1 , 5,1]
+        ///    etc
+        /// </remarks>
+        /// <param name="xPosition"></param>
+        /// <param name="yPosition"></param>
         public void MoveMouse(int xPosition, int yPosition)
         {
             SetCursorPos(xPosition, yPosition);
         }
 
+        /// <summary>
+        /// </summary>
+        /// <param name="xPosition"></param>
+        /// <param name="yPosition"></param>
         public void ClickLeftMouse(int xPosition, int yPosition)
         {
             MoveMouse(xPosition, yPosition);
@@ -113,6 +144,10 @@ namespace Inputter
             mouse_event(MOUSEEVENTF_LEFTUP, xPosition, yPosition, 0, 0);
         }
 
+        /// <summary>
+        /// </summary>
+        /// <param name="xPosition"></param>
+        /// <param name="yPosition"></param>
         public void ClickRightMouse(int xPosition, int yPosition)
         {
             MoveMouse(xPosition, yPosition);
@@ -121,11 +156,17 @@ namespace Inputter
             mouse_event(MOUSEEVENTF_RIGHTUP, xPosition, yPosition, 0, 0);
         }
 
+        /// <summary>
+        /// </summary>
+        /// <param name="key"></param>
         public void PressKeyDown(Key key)
         {
             keybd_event((byte)key, 0, 0, 0);
         }
 
+        /// <summary>
+        /// </summary>
+        /// <param name="key"></param>
         public void PressKeyUp(Key key)
         {
             keybd_event((byte)key, 0, KEY_UP, 0);
@@ -133,7 +174,8 @@ namespace Inputter
 
         internal void RandomSleepKeyPress(int min = 50, int max = 300)
         {
-            System.Threading.Thread.Sleep(_random.Next(min, max));
+            int randomSleepTimeMs = _random.Next(min, max);
+            System.Threading.Thread.Sleep(randomSleepTimeMs);
         }
 
         [DllImport("user32.dll")]
@@ -144,11 +186,6 @@ namespace Inputter
 
         [DllImport("user32.dll")]
         internal static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, uint dwExtraInfo);
-
-        private const int MOUSEEVENTF_LEFTDOWN = 0x02;
-        private const int MOUSEEVENTF_LEFTUP = 0x04;
-        private const int MOUSEEVENTF_RIGHTDOWN = 0x08;
-        private const int MOUSEEVENTF_RIGHTUP = 0x10;
     }
 
     //https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes?redirectedfrom=MSDN
@@ -203,6 +240,7 @@ namespace Inputter
         DELETE = 0x2E,
         HELP = 0x2F,
         ZERO = 0x30,
+
         ONE = 0x31,
         TWO = 0x32,
         THREE = 0x33,
@@ -212,6 +250,7 @@ namespace Inputter
         SEVEN = 0x37,
         EIGHT = 0x38,
         NINE = 0x39,
+
         A = 0x41,
         B = 0x42,
         C = 0x43,
@@ -238,6 +277,7 @@ namespace Inputter
         X = 0x58,
         Y = 0x59,
         Z = 0x5A,
+
         LWIN = 0x5B,
         RWIN = 0x5C,
         APPS = 0x5D,
@@ -259,6 +299,8 @@ namespace Inputter
         SUBTRACT = 0x6D,
         DECIMAL = 0x6E,
         DIVIDE = 0x6F,
+
+        //function keys
         F1 = 0x70,
         F2 = 0x71,
         F3 = 0x72,
@@ -283,6 +325,7 @@ namespace Inputter
         F22 = 0x85,
         F23 = 0x86,
         F24 = 0x87,
+
         //- = 0x88-8F,
         NUMLOCK = 0x90,
         SCROLL = 0x91,
