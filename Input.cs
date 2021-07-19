@@ -140,7 +140,12 @@ namespace Inputter
         {
             MoveMouse(xPosition, yPosition);
             mouse_event(MOUSEEVENTF_LEFTDOWN, xPosition, yPosition, 0, 0);
-            RandomSleepKeyPress();
+            
+            if (_useSleepFeature)
+            {
+                RandomSleepKeyPress();
+            }
+
             mouse_event(MOUSEEVENTF_LEFTUP, xPosition, yPosition, 0, 0);
         }
 
@@ -152,7 +157,12 @@ namespace Inputter
         {
             MoveMouse(xPosition, yPosition);
             mouse_event(MOUSEEVENTF_RIGHTDOWN, xPosition, yPosition, 0, 0);
-            RandomSleepKeyPress();
+            
+            if (_useSleepFeature)
+            {
+                RandomSleepKeyPress();
+            }
+
             mouse_event(MOUSEEVENTF_RIGHTUP, xPosition, yPosition, 0, 0);
         }
 
