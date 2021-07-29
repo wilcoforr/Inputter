@@ -17,7 +17,6 @@ namespace Inputter
         private const int MOUSEEVENTF_RIGHTUP = 0x10;
 
 
-        
         /// <summary>
         /// Constructor
         /// </summary>
@@ -133,6 +132,7 @@ namespace Inputter
         }
 
         /// <summary>
+        /// Click the Left Mouse at a specified X,Y coordinate
         /// </summary>
         /// <param name="xPosition"></param>
         /// <param name="yPosition"></param>
@@ -150,6 +150,7 @@ namespace Inputter
         }
 
         /// <summary>
+        /// Click the Right Mouse at a specified X,Y coordinate
         /// </summary>
         /// <param name="xPosition"></param>
         /// <param name="yPosition"></param>
@@ -167,23 +168,31 @@ namespace Inputter
         }
 
         /// <summary>
+        /// Press a specified Key, down
         /// </summary>
         /// <param name="key"></param>
         public void PressKeyDown(Key key)
         {
-            keybd_event((byte)key, 0, 0, 0);
+            keybd_event( (byte) key, 0, 0, 0);
         }
 
         /// <summary>
+        /// Press a specified Key, up
         /// </summary>
         /// <param name="key"></param>
         public void PressKeyUp(Key key)
         {
-            keybd_event((byte)key, 0, KEY_UP, 0);
+            keybd_event( (byte) key, 0, KEY_UP, 0);
         }
 
+        // force the program to sleep for a random time
         internal void RandomSleepKeyPress(int min = 50, int max = 300)
         {
+            if (min < 0 || max > 1000 * 60)
+            {
+                throw new Exception("Lol what are you doing");
+            }
+
             int randomSleepTimeMs = _random.Next(min, max);
             System.Threading.Thread.Sleep(randomSleepTimeMs);
         }
