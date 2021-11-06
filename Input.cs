@@ -27,6 +27,10 @@ namespace Inputter
             _random = new Random();
         }
 
+        public static List<Key> Keys = new List<Key> { Key.A, Key.B, Key.C, Key.D, Key.E, Key.F, Key.G, Key.H, Key.I, Key.J, Key.K, Key.L, Key.M, Key.N, Key.O, Key.P, Key.Q, Key.R, Key.S, Key.T, Key.U, Key.V, Key.W, Key.X, Key.Y, Key.Z };
+
+        public static List<Key> GetKeys => Keys;
+
         /// <summary>
         /// Send a key press
         /// </summary>
