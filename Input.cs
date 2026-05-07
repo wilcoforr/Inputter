@@ -2,7 +2,9 @@ namespace Inputter
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using System.Runtime.InteropServices;
+    using System.Threading;
 
     /// <summary>
     /// Inputter is a library for simulating keyboard and mouse input on Windows. It uses the user32.dll to send input events to the operating system,
@@ -13,28 +15,24 @@ namespace Inputter
     {
         private const uint KEY_UP = 0x02;
         private const uint KEY_DOWN = 0x00;
-        private static Random _random { get; set; }
+
+        private static readonly Random _random = new();
         private bool _useSleepFeature { get; set; }
 
-        //for user32 dll stuff
-        private const int MOUSEEVENTF_LEFTDOWN = 0x02;
-        private const int MOUSEEVENTF_LEFTUP = 0x04;
-        private const int MOUSEEVENTF_RIGHTDOWN = 0x08;
-        private const int MOUSEEVENTF_RIGHTUP = 0x10;
+        // Mouse flags for SendInput
+        private const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
+        private const uint MOUSEEVENTF_LEFTUP = 0x0004;
+        private const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
+        private const uint MOUSEEVENTF_RIGHTUP = 0x0010;
 
-        public static List<Key> Keys = new List<Key> { Key.A, Key.B, Key.C, Key.D,
-            Key.E, Key.F, Key.G, Key.H, Key.I, Key.J, Key.K, Key.L, Key.M, Key.N,
-            Key.O, Key.P, Key.Q, Key.R, Key.S, Key.T, Key.U, Key.V, Key.W, Key.X,
-            Key.Y, Key.Z };
 
         /// <summary>
-        /// Constructor
+        /// Constructor. By default, the Input class will use the sleep feature to add random delays between key presses and mouse clicks. 
         /// </summary>
         /// <param name="useSleepFeature"></param>
         public Input(bool useSleepFeature = true)
         {
             _useSleepFeature = useSleepFeature;
-            _random = new Random();
         }
 
         #region Keys
@@ -45,16 +43,15 @@ namespace Inputter
         /// <param name="key"></param>
         public void PressKeyDown(Key key)
         {
-            keybd_event((byte)key, 0, KEY_DOWN, 0);
+            SendKeyboard((ushort)key, keyUp: false);
         }
 
         /// <summary>
-        /// Press a specified Key, up
+        /// Release a specified Key (key up).
         /// </summary>
-        /// <param name="key"></param>
         public void PressKeyUp(Key key)
         {
-            keybd_event((byte)key, 0, KEY_UP, 0);
+            SendKeyboard((ushort)key, keyUp: true);
         }
 
 
@@ -99,7 +96,6 @@ namespace Inputter
             {
                 PressKeyDown(mod);
             }
-
             Send(key);
 
             foreach (var mod in modifiers)
@@ -175,14 +171,14 @@ namespace Inputter
         public void ClickLeftMouse(int xPosition, int yPosition)
         {
             MoveMouse(xPosition, yPosition);
-            mouse_event(MOUSEEVENTF_LEFTDOWN, xPosition, yPosition, 0, 0);
+            SendMouse(MOUSEEVENTF_LEFTDOWN);
 
             if (_useSleepFeature)
             {
                 RandomSleepForKeyPress();
             }
 
-            mouse_event(MOUSEEVENTF_LEFTUP, xPosition, yPosition, 0, 0);
+            SendMouse(MOUSEEVENTF_LEFTUP);
         }
 
         /// <summary>
@@ -193,14 +189,14 @@ namespace Inputter
         public void ClickRightMouse(int xPosition, int yPosition)
         {
             MoveMouse(xPosition, yPosition);
-            mouse_event(MOUSEEVENTF_RIGHTDOWN, xPosition, yPosition, 0, 0);
+            SendMouse(MOUSEEVENTF_RIGHTDOWN);
 
             if (_useSleepFeature)
             {
                 RandomSleepForKeyPress();
             }
 
-            mouse_event(MOUSEEVENTF_RIGHTUP, xPosition, yPosition, 0, 0);
+            SendMouse(MOUSEEVENTF_RIGHTUP);
         }
 
         #endregion
@@ -215,23 +211,114 @@ namespace Inputter
         /// specified range.</remarks>
         /// <param name="min">The minimum sleep duration in milliseconds.</param>
         /// <param name="max">The maximum sleep duration in milliseconds.</param>
-        internal void RandomSleepForKeyPress(int min = 50, int max = 300)
+        internal void RandomSleepForKeyPress(int min = 0, int max = 300)
         {
             int randomSleepTimeMs = _random.Next(min, max);
-            randomSleepTimeMs = Math.Clamp(randomSleepTimeMs, 0, 1000);
+            randomSleepTimeMs = Math.Clamp(randomSleepTimeMs, 0, 300);
             Thread.Sleep(randomSleepTimeMs);
         }
 
         #endregion
 
-        [DllImport("user32.dll")]
+        [DllImport("user32.dll", SetLastError = true)]
         internal static extern bool SetCursorPos(int x, int y);
 
-        [DllImport("user32.dll")]
-        internal static extern void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint SendInput(uint nInputs, [In] INPUT[] pInputs, int cbSize);
 
-        [DllImport("user32.dll")]
-        internal static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, uint dwExtraInfo);
+        [StructLayout(LayoutKind.Sequential)]
+        private struct INPUT
+        {
+            public uint type;
+            public InputUnion U;
+        }
+
+        [StructLayout(LayoutKind.Explicit)]
+        private struct InputUnion
+        {
+            [FieldOffset(0)] public MOUSEINPUT mi;
+            [FieldOffset(0)] public KEYBDINPUT ki;
+            [FieldOffset(0)] public HARDWAREINPUT hi;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MOUSEINPUT
+        {
+            public int dx;
+            public int dy;
+            public uint mouseData;
+            public uint dwFlags;
+            public uint time;
+            public UIntPtr dwExtraInfo;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct KEYBDINPUT
+        {
+            public ushort wVk;
+            public ushort wScan;
+            public uint dwFlags;
+            public uint time;
+            public UIntPtr dwExtraInfo;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct HARDWAREINPUT
+        {
+            public uint uMsg;
+            public ushort wParamL;
+            public ushort wParamH;
+        }
+
+        private const uint INPUT_MOUSE = 0;
+        private const uint INPUT_KEYBOARD = 1;
+        private const uint INPUT_HARDWARE = 2;
+
+        private const uint KEYEVENTF_KEYUP = 0x0002;
+
+        private void SendMouse(uint mouseFlags)
+        {
+            var input = new INPUT
+            {
+                type = INPUT_MOUSE,
+                U = new InputUnion
+                {
+                    mi = new MOUSEINPUT
+                    {
+                        dx = 0,
+                        dy = 0,
+                        mouseData = 0,
+                        dwFlags = mouseFlags,
+                        time = 0,
+                        dwExtraInfo = UIntPtr.Zero
+                    }
+                }
+            };
+
+            var inputs = new[] { input };
+            _ = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+        }
+
+        private void SendKeyboard(ushort virtualKey, bool keyUp)
+        {
+            var ki = new KEYBDINPUT
+            {
+                wVk = virtualKey,
+                wScan = 0,
+                dwFlags = keyUp ? KEYEVENTF_KEYUP : 0,
+                time = 0,
+                dwExtraInfo = UIntPtr.Zero
+            };
+
+            var input = new INPUT
+            {
+                type = INPUT_KEYBOARD,
+                U = new InputUnion { ki = ki }
+            };
+
+            var inputs = new[] { input };
+            _ = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+        }
     }
 
 
