@@ -4,9 +4,15 @@ namespace Inputter
     using System.Collections.Generic;
     using System.Runtime.InteropServices;
 
+    /// <summary>
+    /// Inputter is a library for simulating keyboard and mouse input on Windows. It uses the user32.dll to send input events to the operating system,
+    /// allowing you to automate tasks that require user interaction. You can send key presses, mouse clicks, and even move the mouse cursor to specific coordinates on the screen.
+    /// The library also includes a feature to add random delays between key presses and mouse clicks, making the automation appear more human-like.
+    /// </summary>
     public class Input
     {
         private const uint KEY_UP = 0x02;
+        private const uint KEY_DOWN = 0x00;
         private static Random _random { get; set; }
         private bool _useSleepFeature { get; set; }
 
@@ -16,6 +22,10 @@ namespace Inputter
         private const int MOUSEEVENTF_RIGHTDOWN = 0x08;
         private const int MOUSEEVENTF_RIGHTUP = 0x10;
 
+        public static List<Key> Keys = new List<Key> { Key.A, Key.B, Key.C, Key.D,
+            Key.E, Key.F, Key.G, Key.H, Key.I, Key.J, Key.K, Key.L, Key.M, Key.N,
+            Key.O, Key.P, Key.Q, Key.R, Key.S, Key.T, Key.U, Key.V, Key.W, Key.X,
+            Key.Y, Key.Z };
 
         /// <summary>
         /// Constructor
@@ -27,9 +37,26 @@ namespace Inputter
             _random = new Random();
         }
 
-        public static List<Key> Keys = new List<Key> { Key.A, Key.B, Key.C, Key.D, Key.E, Key.F, Key.G, Key.H, Key.I, Key.J, Key.K, Key.L, Key.M, Key.N, Key.O, Key.P, Key.Q, Key.R, Key.S, Key.T, Key.U, Key.V, Key.W, Key.X, Key.Y, Key.Z };
+        #region Keys
 
-        public static List<Key> GetKeys => Keys;
+        /// <summary>
+        /// Press a specified Key, down
+        /// </summary>
+        /// <param name="key"></param>
+        public void PressKeyDown(Key key)
+        {
+            keybd_event((byte)key, 0, KEY_DOWN, 0);
+        }
+
+        /// <summary>
+        /// Press a specified Key, up
+        /// </summary>
+        /// <param name="key"></param>
+        public void PressKeyUp(Key key)
+        {
+            keybd_event((byte)key, 0, KEY_UP, 0);
+        }
+
 
         /// <summary>
         /// Send a key press
@@ -41,9 +68,9 @@ namespace Inputter
 
             if (_useSleepFeature)
             {
-                RandomSleepKeyPress();
+                RandomSleepForKeyPress();
             }
-            
+
             PressKeyUp(key);
         }
 
@@ -72,7 +99,7 @@ namespace Inputter
             {
                 PressKeyDown(mod);
             }
-            
+
             Send(key);
 
             foreach (var mod in modifiers)
@@ -119,6 +146,11 @@ namespace Inputter
             }
         }
 
+        #endregion
+
+        #region Mouse
+
+
         /// <summary>
         /// Move the mouse to a specified mouse position on the user's primary monitor
         /// </summary>
@@ -144,10 +176,10 @@ namespace Inputter
         {
             MoveMouse(xPosition, yPosition);
             mouse_event(MOUSEEVENTF_LEFTDOWN, xPosition, yPosition, 0, 0);
-            
+
             if (_useSleepFeature)
             {
-                RandomSleepKeyPress();
+                RandomSleepForKeyPress();
             }
 
             mouse_event(MOUSEEVENTF_LEFTUP, xPosition, yPosition, 0, 0);
@@ -162,44 +194,35 @@ namespace Inputter
         {
             MoveMouse(xPosition, yPosition);
             mouse_event(MOUSEEVENTF_RIGHTDOWN, xPosition, yPosition, 0, 0);
-            
+
             if (_useSleepFeature)
             {
-                RandomSleepKeyPress();
+                RandomSleepForKeyPress();
             }
 
             mouse_event(MOUSEEVENTF_RIGHTUP, xPosition, yPosition, 0, 0);
         }
 
-        /// <summary>
-        /// Press a specified Key, down
-        /// </summary>
-        /// <param name="key"></param>
-        public void PressKeyDown(Key key)
-        {
-            keybd_event( (byte) key, 0, 0, 0);
-        }
+        #endregion
+
+
+        #region Internal Helpers
 
         /// <summary>
-        /// Press a specified Key, up
+        /// Pauses execution for a random duration to simulate natural key press timing.
         /// </summary>
-        /// <param name="key"></param>
-        public void PressKeyUp(Key key)
+        /// <remarks>The sleep duration is clamped between 0 and 1000 milliseconds regardless of the
+        /// specified range.</remarks>
+        /// <param name="min">The minimum sleep duration in milliseconds.</param>
+        /// <param name="max">The maximum sleep duration in milliseconds.</param>
+        internal void RandomSleepForKeyPress(int min = 50, int max = 300)
         {
-            keybd_event( (byte) key, 0, KEY_UP, 0);
-        }
-
-        // force the program to sleep for a random time
-        internal void RandomSleepKeyPress(int min = 50, int max = 300)
-        {
-            if (min < 0 || max > 1000 * 60)
-            {
-                throw new Exception("Lol what are you doing");
-            }
-
             int randomSleepTimeMs = _random.Next(min, max);
-            System.Threading.Thread.Sleep(randomSleepTimeMs);
+            randomSleepTimeMs = Math.Clamp(randomSleepTimeMs, 0, 1000);
+            Thread.Sleep(randomSleepTimeMs);
         }
+
+        #endregion
 
         [DllImport("user32.dll")]
         internal static extern bool SetCursorPos(int x, int y);
@@ -211,7 +234,13 @@ namespace Inputter
         internal static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, uint dwExtraInfo);
     }
 
-    //https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes?redirectedfrom=MSDN
+
+    /// <summary>
+    /// Represents Windows virtual key codes for keyboard and mouse input.
+    /// </summary>
+    /// <remarks>For more information, see <see
+    /// href="https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes">Virtual-Key
+    /// Codes</see>.</remarks>
     public enum Key
     {
         LBUTTON = 0x01,
@@ -262,8 +291,8 @@ namespace Inputter
         INSERT = 0x2D,
         DELETE = 0x2E,
         HELP = 0x2F,
+        
         ZERO = 0x30,
-
         ONE = 0x31,
         TWO = 0x32,
         THREE = 0x33,
@@ -363,9 +392,9 @@ namespace Inputter
 
         COMMA = 0xBC,
         PERIOD = 0xBE,
-        QUESTION_MARK = 0xBF, //For the US standard keyboard, the '/?' key
-        LEFT_BRACKET = 0xDB, //For the US standard keyboard, the '[{' key
-        RIGHT_BRACKET = 0xDD, // For the US standard keyboard, the ']}' key
-        QUOTE = 0xDE, // For the US standard keyboard, the 'single-quote/double-quote ' " ' key
+        QUESTION_MARK = 0xBF,   //For the US standard keyboard, the '/?' key
+        LEFT_BRACKET = 0xDB,    //For the US standard keyboard, the '[{' key
+        RIGHT_BRACKET = 0xDD,   //For the US standard keyboard, the ']}' key
+        QUOTE = 0xDE,           //For the US standard keyboard, the 'single-quote/double-quote ' " ' key
     }
 }
